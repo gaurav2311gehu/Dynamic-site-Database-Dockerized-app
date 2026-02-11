@@ -7,16 +7,13 @@ const app = express();
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({ extended: false }));
 
-// DB Connection
 const sequelize = new Sequelize("tasksdb", "postgres", "postgres", {
   host: "db",
   dialect: "postgres",
+  logging: false,
 });
 
 const Task = TaskModel(sequelize);
-
-// Sync DB
-sequelize.sync();
 
 app.get("/", async (req, res) => {
   const tasks = await Task.findAll();
@@ -33,4 +30,19 @@ app.post("/delete/:id", async (req, res) => {
   res.redirect("/");
 });
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+async function start() {
+  try {
+    await sequelize.authenticate();
+    await sequelize.sync();
+    console.log("Database connected ✅");
+
+    app.listen(3000, () => {
+      console.log("Server running on port 3000 🚀");
+    });
+  } catch (err) {
+    console.log("DB not ready... retrying");
+    setTimeout(start, 5000);
+  }
+}
+
+start();
